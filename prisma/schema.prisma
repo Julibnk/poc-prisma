@@ -1,0 +1,238 @@
+datasource db {
+  // url      = "postgresql://postgres:l59soL6MVQRk0uG5fjQg@containers-us-west-68.railway.app:5435/railway"
+  url      = env("DATABASE_URL")
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  GOD
+  ACCOUNT_ADMIN
+  ACCOUNT_USER
+}
+
+enum DictionaryKey {
+  HOLA
+}
+
+model Account {
+
+  // PK
+  id String @id @default(uuid()) @db.Uuid
+
+  companyName String
+  vat         String
+  street      String
+  number      Int
+  postalCode  Int
+  region      String @db.VarChar(2)
+  country     String @db.VarChar(2)
+
+  createdAt      DateTime @default(now())
+  createUsername String
+  updatedAt      DateTime @default(now())
+  updateUsername String
+
+
+  // Relations
+  MetaAccount MetaAccount?
+  User        User[]
+  Contact     Contact[]
+  Category    Category[]
+
+}
+
+model User {
+
+  // PK
+  accountId String @db.Uuid
+  id        String @default(uuid()) @db.Uuid
+
+  username String @unique
+  mail     String
+  role     Role
+
+  createdAt      DateTime @default(now())
+  createUsername String
+  updatedAt      DateTime @default(now())
+  updateUsername String
+
+  //Relation
+  Account Account @relation(fields: [accountId], references: [id])
+
+
+  @@id([accountId, id])
+}
+
+model Contact {
+
+  // PK
+  accountId String @db.Uuid
+  id        String @default(uuid()) @db.Uuid
+
+  createdAt      DateTime @default(now())
+  createUsername String
+  updatedAt      DateTime @default(now())
+  updateUsername String
+
+  // Relations
+  Account Account @relation(fields: [accountId], references: [id])
+
+  // Microservice relations
+  Message Message[]
+
+  @@id([accountId, id])
+}
+
+model Category {
+
+  // PK
+  accountId String @db.Uuid
+  id        String @default(uuid()) @db.Uuid
+
+
+  createdAt      DateTime @default(now())
+  createUsername String
+  updatedAt      DateTime @default(now())
+  updateUsername String
+
+  //Relations
+  Account Account @relation(fields: [accountId], references: [id])
+
+  //Microservice Relation
+  Template Template[]
+
+
+  @@id([accountId, id])
+}
+
+// ********//
+//  META   //
+// ********//
+model MetaAccount {
+
+  // PK
+  id String @id @default(uuid()) @db.Uuid
+
+  createdAt      DateTime @default(now())
+  createUsername String
+  updatedAt      DateTime @default(now())
+  updateUsername String
+
+
+  // Relation
+  accountId String  @unique @db.Uuid
+  Account   Account @relation(fields: [accountId], references: [id])
+
+  Phone    Phone[]
+  Template Template[]
+  Message  Message[]
+
+
+}
+
+model Template {
+
+  // PK
+  metaAccountId String @db.Uuid
+  id            String @default(uuid()) @db.Uuid
+
+  createdAt      DateTime @default(now())
+  createUsername String
+  updatedAt      DateTime @default(now())
+  updateUsername String
+
+  // Relation
+  MetaAccount MetaAccount @relation(fields: [metaAccountId], references: [id])
+  Message     Message[]
+
+  // Microservice relation
+  Category          Category? @relation(fields: [categoryAccountId, categoryId], references: [accountId, id])
+  categoryAccountId String?   @db.Uuid
+  categoryId        String?   @db.Uuid
+
+
+  @@id([metaAccountId, id])
+}
+
+model Message {
+
+  // PK
+  metaAccountId String @db.Uuid
+  id            String @default(uuid()) @db.Uuid
+
+  createdAt      DateTime @default(now())
+  createUsername String
+  updatedAt      DateTime @default(now())
+  updateUsername String
+
+  // Relations
+  MetaAccount MetaAccount @relation(fields: [metaAccountId], references: [id])
+
+  Template   Template @relation(fields: [metaAccountId, templateId], references: [metaAccountId, id])
+  templateId String   @db.Uuid
+
+  Phone   Phone  @relation(fields: [metaAccountId, phoneId], references: [metaAccountId, id])
+  phoneId String @db.Uuid
+
+  //  Microservice relation
+  Contact          Contact? @relation(fields: [contactAccountId, contactId], references: [accountId, id])
+  contactAccountId String?  @db.Uuid
+  contactId        String?  @db.Uuid
+
+  @@id([metaAccountId, id])
+}
+
+model Phone {
+  // PK
+  metaAccountId String @db.Uuid
+  id            String @default(uuid()) @db.Uuid
+
+  createdAt      DateTime @default(now())
+  createUsername String
+  updatedAt      DateTime @default(now())
+  updateUsername String
+
+  //Relations
+  MetaAccount MetaAccount @relation(fields: [metaAccountId], references: [id])
+  Message     Message[]
+
+  @@id([metaAccountId, id])
+}
+
+// ************//
+//  MASTERDATA //
+// ************//
+
+model Dictionary {
+
+  // PK
+  id    String        @id @default(uuid()) @db.Uuid
+  key   DictionaryKey
+  value String
+
+  dictionaryText DictionaryText[]
+
+
+  @@unique([key, value])
+}
+
+model DictionaryText {
+
+  // PK
+  id String @id @default(uuid()) @db.Uuid
+
+  key      DictionaryKey
+  language String        @db.VarChar(2)
+  value    String
+  text     String
+
+
+  // Relation
+  Dictionary Dictionary @relation(fields: [key, value], references: [key, value])
+
+  @@unique([key, language, value])
+}
